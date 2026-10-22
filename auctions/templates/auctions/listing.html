@@ -1,0 +1,96 @@
+{% extends "auctions/layout.html" %}
+
+{% block body %}
+    <div class="container">
+        <h2>Listing: {{ listing.title }}</h2>
+
+        <!-- تنبيه الفائز بالمزاد -->
+        {% if is_winner %}
+            <div class="alert alert-success" role="alert">
+                🎉 Congratulations! You won this auction!
+            </div>
+        {% endif %}
+
+        <!-- إشعار إغلاق المزاد -->
+        {% if not listing.is_active %}
+            <div class="alert alert-secondary" role="alert">
+                This auction is currently closed.
+            </div>
+        {% endif %}
+        
+        {% if listing.image_url %}
+            <div class="mb-3">
+                <img src="{{ listing.image_url }}" alt="{{ listing.title }}" style="max-height: 300px; object-fit: cover;" class="img-fluid">
+            </div>
+        {% endif %}
+
+        <p><strong>Description:</strong> {{ listing.description }}</p>
+        
+        <h3>Current Price: ${{ listing.price }}</h3>
+
+        <p><strong>Created by:</strong> {{ listing.owner.username }}</p>
+        <p><strong>Category:</strong> {% if listing.category %}{{ listing.category.category_name }}{% else %}No Category{% endif %}</p>
+
+        <!-- زر إغلاق المزاد للمالك فقط -->
+        {% if user.is_authenticated and user == listing.owner and listing.is_active %}
+            <form action="{% url 'listing_page' listing.id %}" method="POST" class="mb-3">
+                {% csrf_token %}
+                <input type="hidden" name="close_auction" value="true">
+                <button type="submit" class="btn btn-warning">Close Auction</button>
+            </form>
+        {% endif %}
+
+        <!-- زر قائمة المتابعة -->
+        {% if user.is_authenticated %}
+            <form action="{% url 'toggle_watchlist' listing.id %}" method="POST" class="mb-3">
+                {% csrf_token %}
+                {% if in_watchlist %}
+                    <button type="submit" class="btn btn-danger">Remove from Watchlist</button>
+                {% else %}
+                    <button type="submit" class="btn btn-success">Add to Watchlist</button>
+                {% endif %}
+            </form>
+        {% endif %}
+
+        <!-- نموذج المزايدة -->
+        {% if user.is_authenticated and listing.is_active %}
+            <form action="{% url 'listing_page' listing.id %}" method="POST" class="mt-3">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label>Place your bid:</label>
+                    <input class="form-control" type="number" step="0.01" name="bid_amount" required>
+                </div>
+                <button class="btn btn-primary mt-2" type="submit">Submit Bid</button>
+            </form>
+        {% endif %}
+
+        {% if message %}
+            <div class="alert alert-danger mt-3">{{ message }}</div>
+        {% endif %}
+
+        <!-- قسم التعليقات -->
+        <hr class="mt-4">
+        <h3>Comments</h3>
+
+        {% if user.is_authenticated %}
+            <form action="{% url 'listing_page' listing.id %}" method="POST" class="mb-4">
+                {% csrf_token %}
+                <div class="form-group">
+                    <textarea class="form-control" name="comment_message" rows="3" placeholder="Add a comment..." required></textarea>
+                </div>
+                <button type="submit" class="btn btn-secondary mt-2">Post Comment</button>
+            </form>
+        {% endif %}
+
+        <div class="list-group mb-4">
+            {% for comment in comments %}
+                <div class="list-group-item mb-2">
+                    <p class="mb-1"><strong>{{ comment.user.username }}</strong> <small class="text-muted">({{ comment.created_at|date:"M d, Y, P" }})</small></p>
+                    <p class="mb-1">{{ comment.message }}</p>
+                </div>
+            {% empty %}
+                <p class="text-muted">No comments yet. Be the first to comment!</p>
+            {% endfor %}
+        </div>
+    </div>
+{% endblock %}
